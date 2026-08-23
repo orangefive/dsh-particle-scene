@@ -1,0 +1,5 @@
+# dsh-particle-scene bundle 层：插入粒子场景插件行。
+- insert:
+    - id: dsh-particle-scene
+      name: '@orangefive/dsh-particle-scene'
+      config: {}

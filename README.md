@@ -30,7 +30,7 @@ npm run build          # 产物：lib/client.js（客户端）、lib/index.js（
 npm pack               # 产物：*.tgz
 ```
 
-得到插件包后，在 DSH profile 的 `package.json` 中以 `link:` 依赖配合 `bundles` 数组装配（与官方 `@deepseek-ai/dsh-client-ui-*` 插件一致），或发布到 npm 后直接依赖安装。
+得到插件包后，在 DSH profile 的 `package.json` 中以 `link:` 依赖配合 `bundles` 数组装配（与官方 `@deepseek-ai/dsh-client-ui-*` 插件一致）。该包通过 `dsh.bundle.patch` 声明自己的 `cordis.patch.yml` 补丁层，装配时自动插入插件行，无需手动编辑 profile 补丁；也可发布到 npm 后直接依赖安装。
 
 ### 方式 B：super-injector 热注入
 
