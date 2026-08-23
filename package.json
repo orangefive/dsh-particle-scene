@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "description": "Sci-fi particle text scene + glassmorphism buttons for the DeepSeek Harness (DSH) web UI — hover scatters the particles apart, one click reverts to the stock UI.",
   "type": "module",
-  "main": "./lib/client.js",
+  "main": "./lib/index.js",
   "files": [
     "lib"
   ],
   "exports": {
-    ".": "./lib/client.js",
+    ".": "./lib/index.js",
     "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
