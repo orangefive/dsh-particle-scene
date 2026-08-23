@@ -58,13 +58,16 @@ type SlotsLike = {
 
 type ThemeLike = {
   getTheme(): { active?: { colorScheme?: string } }
-  subscribe(fn: () => void): () => void
   overrideTokens(source: string, tokens: Record<string, { light: string; dark: string }>): () => void
 }
+
+/** 主题切换订阅：由 apply 注入（ctx.on('theme/change')），返回退订函数。 */
+type OnThemeChange = (fn: () => void) => () => void
 
 type ClientContext = {
   slots: SlotsLike
   theme?: ThemeLike
+  on(name: string, fn: (payload?: unknown) => unknown): () => void
 }
 
 export const inject = ['slots', 'theme']
@@ -170,7 +173,12 @@ function sampleText(text: string): { x: number; y: number }[] {
 }
 
 // ================= 粒子引擎：鼠标靠近 -> 推开散开；移开 -> 归位重组 =================
-function createEngine(canvas: HTMLCanvasElement, g: CanvasRenderingContext2D, theme: ThemeLike | undefined) {
+function createEngine(
+  canvas: HTMLCanvasElement,
+  g: CanvasRenderingContext2D,
+  theme: ThemeLike | undefined,
+  onThemeChange: OnThemeChange,
+) {
   const W = 1400
   const H = 440
 
@@ -364,7 +372,7 @@ function createEngine(canvas: HTMLCanvasElement, g: CanvasRenderingContext2D, th
         document.removeEventListener('mouseleave', onLeave)
       })
       if (theme !== undefined) {
-        disposers.push(theme.subscribe(() => { scheme = readScheme() }))
+        disposers.push(onThemeChange(() => { scheme = readScheme() }))
       }
       let reduced = false
       try {
@@ -428,17 +436,17 @@ function insertCss(css: string): () => void {
 
 // ================= 组件 =================
 
-function ParticleCanvas({ theme }: { theme: ThemeLike | undefined }) {
+function ParticleCanvas({ theme, onThemeChange }: { theme: ThemeLike | undefined; onThemeChange: OnThemeChange }) {
   const ref = React.useRef<HTMLCanvasElement | null>(null)
   React.useEffect(() => {
     const canvas = ref.current
     if (!canvas) return
     const g = canvas.getContext('2d')
     if (!g) return
-    const engine = createEngine(canvas, g, theme)
+    const engine = createEngine(canvas, g, theme, onThemeChange)
     engine.start()
     return () => engine.stop()
-  }, [theme])
+  }, [theme, onThemeChange])
   return React.createElement('canvas', {
     ref,
     'aria-hidden': true,
@@ -452,7 +460,7 @@ function ParticleCanvas({ theme }: { theme: ThemeLike | undefined }) {
   })
 }
 
-function Scene({ store, theme }: { store: Store; theme: ThemeLike | undefined }) {
+function Scene({ store, theme, onThemeChange }: { store: Store; theme: ThemeLike | undefined; onThemeChange: OnThemeChange }) {
   const [on, setOn] = React.useState(store.enabled)
   React.useEffect(() => store.sub(setOn), [store])
   React.useEffect(() => {
@@ -468,7 +476,7 @@ function Scene({ store, theme }: { store: Store; theme: ThemeLike | undefined })
     }
   }, [on, theme])
   if (!on) return null
-  return React.createElement(ParticleCanvas, { theme })
+  return React.createElement(ParticleCanvas, { theme, onThemeChange })
 }
 
 function Toggle({ store }: { store: Store }) {
@@ -489,11 +497,19 @@ function Toggle({ store }: { store: Store }) {
 export function apply(ctx: ClientContext): void {
   const store = createStore()
   const theme = ctx.theme
+  // 主题切换订阅：ThemeService 没有 subscribe，主题变更走 theme/change 事件
+  const onThemeChange: OnThemeChange = (fn) => {
+    try {
+      return ctx.on('theme/change', fn)
+    } catch {
+      return () => {}
+    }
+  }
 
   ctx.slots.inject('shell.overlay', () =>
     ctx.slots.register(
       { name: 'shell.overlay', id: 'particle-scene' },
-      () => React.createElement(Scene, { store, theme }),
+      () => React.createElement(Scene, { store, theme, onThemeChange }),
     ),
   )
 
